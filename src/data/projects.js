@@ -1,0 +1,74 @@
+export const projects = [
+  {
+    id: 1,
+    title: 'AI 情感陪伴助手',
+    category: 'AI 产品',
+    featured: true,
+    description: '一款主打情绪价值的 AI 陪伴 App。基于 LLM 大语言模型，结合心理学模型，能够识别用户情绪波动并提供拟人化的温暖交流与疏导。',
+    image: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    tags: ['产品设计', 'Prompt Engineering', 'LLM', '用户调研'],
+    detail: {
+      background: '在博士研究期间，我发现许多留学生和高压工作者长期处于情绪孤岛状态，现有心理健康 App 过于医疗化，缺乏日常陪伴感。这个痛点驱动我思考：LLM 是否可以提供有温度的情感支持？',
+      challenge: '核心挑战在于如何让 AI 回应既不过于机械，也不越界扮演「治疗师」。我通过大量 Prompt 工程迭代，结合非暴力沟通（NVC）框架，设计出分层情绪响应机制。',
+      outcome: '完成 MVP 产品设计方案与核心 Prompt 体系，正在寻找技术合作伙伴共同落地。',
+    },
+  },
+  {
+    id: 2,
+    title: '智能情绪唤醒闹钟',
+    category: 'AI 产品',
+    featured: true,
+    description: '结合用户的作息周期与前一晚的情绪状态，利用 AI 动态生成每日不同的早晨唤醒语音和音乐，让起床不再是一件痛苦的事。',
+    image: 'https://images.unsplash.com/photo-1507679361661-d70cb65313a4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    tags: ['AI 语音合成', '产品概念', 'App 设计'],
+    detail: {
+      background: '博士阶段的高强度科研让我深刻体会到：早晨的心理状态会影响全天效率。传统闹钟千篇一律，无法感知人的情绪节律。',
+      challenge: '如何低摩擦地采集用户情绪数据（不依赖主动填写），并将其与语音合成、音乐推荐系统联动，是核心技术难点。',
+      outcome: '完成产品概念设计与交互原型，探索与 TTS 服务商的合作可能。',
+    },
+  },
+  {
+    id: 3,
+    title: '全球锂资源供应链深度调研',
+    category: '行业调研',
+    featured: true,
+    description: '跨越学术界与产业界，深入分析了全球新能源背景下锂矿资源的分布、开采技术壁垒及未来商业化应用前景的深度报告。',
+    image: 'https://images.unsplash.com/photo-1603584852959-1e3a47da2f14?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    tags: ['行业研报', '数据分析', '新能源产业链'],
+    detail: {
+      background: '化工博士的专业背景让我对新能源材料有天然的敏感度。在全球新能源车渗透率快速提升的背景下，锂资源的供应瓶颈成为产业关键变量。',
+      challenge: '整合分散在地质报告、企业年报、学术文献中的数据，建立统一的分析框架，并转化为对投资者和产业方都有价值的洞察。',
+      outcome: '形成 5 万字深度研报，覆盖资源分布、开采技术、产业链格局与投资风险四大维度。',
+    },
+  },
+  {
+    id: 4,
+    title: '新型化工材料合成与表征',
+    category: '学术科研',
+    featured: false,
+    description: 'Monash 大学博士期间的核心课题。探索了在极端条件下的材料反应机理，相关成果对优化工业生产流程具有重要意义。',
+    image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    tags: ['材料科学', '实验设计', '化工工程', '数据建模'],
+    detail: {
+      background: 'Monash 大学化工系博士核心研究方向，聚焦新型功能材料在极端温压条件下的合成路径与结构表征。',
+      challenge: '实验条件控制精度要求极高，数据采集与建模需要跨学科知识融合（化学、物理、计算机模拟）。',
+      outcome: '正在撰写中，预计发表于国际期刊。',
+    },
+  },
+  {
+    id: 5,
+    title: '周末手作实验：木工与皮具',
+    category: '创客生活',
+    featured: false,
+    description: '将工程师的严谨带入生活日常。记录了从原木到家具、从整皮到钱包的打磨过程，享受创造实物的纯粹乐趣。',
+    image: 'https://images.unsplash.com/photo-1520699049698-acd2fce18736?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    tags: ['手工制作', '生活美学', '匠人精神'],
+    detail: {
+      background: '长期的科研工作让我渴望一种能立刻看到成果的创造体验。木工和皮具制作恰好满足了这种需求——每一件作品都是独一无二的。',
+      challenge: '从选材、打版到手工缝制，每个环节都需要精确的测量和耐心的打磨，和做科研一样：细节决定成败。',
+      outcome: '已完成多件木质家具和皮具作品，部分作为礼物赠予朋友，收获了真实的使用反馈。',
+    },
+  },
+];
+
+export const featuredProjects = projects.filter(p => p.featured);
