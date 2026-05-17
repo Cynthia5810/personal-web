@@ -243,33 +243,38 @@ export default function WorldMap() {
           </ComposableMap>
         </div>
 
-        {/* ── Layer 1: edge fade — hides sphere boundary, blends into page ── */}
+        {/* ── Layer 1: atmospheric sphere fade — starts early, builds gradually ── */}
+        {/* Fade begins at ~45% radius (visual "horizon" of sphere), dissolves to BG */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
-            ellipse 94% 92% at 50% 50%,
-            transparent               74%,
-            rgba(248,250,252,0.18)    84%,
-            rgba(248,250,252,0.60)    92%,
+            ellipse 88% 70% at 50% 50%,
+            transparent               44%,
+            rgba(248,250,252,0.04)    54%,
+            rgba(248,250,252,0.13)    64%,
+            rgba(248,250,252,0.30)    74%,
+            rgba(248,250,252,0.56)    84%,
+            rgba(248,250,252,0.84)    93%,
             ${BG}                     100%
           )`,
         }} />
 
-        {/* ── Layer 2: sphere catch-light — top-left glow for 3-D depth ── */}
+        {/* ── Layer 2: top & bottom edge blend — extra vertical fade into page ── */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: `radial-gradient(
-            ellipse 55% 48% at 36% 28%,
-            rgba(255,255,255,0.11) 0%,
-            transparent            70%
+          background: `linear-gradient(
+            to bottom,
+            rgba(248,250,252,0.55) 0%,
+            transparent             18%,
+            transparent             82%,
+            rgba(248,250,252,0.55) 100%
           )`,
         }} />
 
-        {/* ── Layer 3: subtle rim shadow — reinforces sphere curvature ── */}
+        {/* ── Layer 3: catch-light — subtle top-left glow for 3-D sphere depth ── */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
-            ellipse 90% 88% at 50% 50%,
-            transparent               62%,
-            rgba(100,120,160,0.045)   82%,
-            transparent               100%
+            ellipse 52% 46% at 35% 28%,
+            rgba(255,255,255,0.10) 0%,
+            transparent            68%
           )`,
         }} />
 
