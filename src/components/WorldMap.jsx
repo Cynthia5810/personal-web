@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { ComposableMap, Geographies, Geography, Marker, Graticule, Sphere } from 'react-simple-maps';
 import { useNavigate } from 'react-router-dom';
 import { projects } from '../data/projects';
 
-// TopoJSON world data (no labels, just shapes)
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
-// City clusters: group projects by city, add extra "footprint" cities
+// Centered between Shanghai and Melbourne
+const INITIAL_ROTATION = [-128, -5, 0];
+
 const CITY_MARKERS = [
   {
     id: 'melbourne',
@@ -14,10 +15,11 @@ const CITY_MARKERS = [
     subtitle: 'Melbourne · Australia',
     coordinates: [144.9631, -37.8136],
     projectIds: [1, 2, 3, 4, 5],
-    color: '#6366f1',   // indigo — main hub
-    pulseColor: 'rgba(99,102,241,0.35)',
-    radius: 9,
+    color: '#6366f1',
+    radius: 7,
     type: 'main',
+    tagColor: 'bg-indigo-50 text-indigo-600',
+    tagLabel: '5 个项目',
   },
   {
     id: 'shanghai',
@@ -26,200 +28,325 @@ const CITY_MARKERS = [
     coordinates: [121.4737, 31.2304],
     projectIds: [],
     note: '本科就读地',
-    color: '#a855f7',   // purple — education background
-    pulseColor: 'rgba(168,85,247,0.35)',
-    radius: 7,
+    color: '#a855f7',
+    radius: 5,
     type: 'education',
-  },
-  // Secondary research-coverage dots for lithium supply chain
-  {
-    id: 'santiago',
-    city: '圣地亚哥',
-    subtitle: 'Santiago · Chile',
-    coordinates: [-70.6693, -33.4489],
-    projectIds: [3],
-    note: '锂矿调研覆盖',
-    color: '#f59e0b',   // amber — research coverage
-    pulseColor: 'rgba(245,158,11,0.3)',
-    radius: 5,
-    type: 'research',
-  },
-  {
-    id: 'buenosaires',
-    city: '布宜诺斯艾利斯',
-    subtitle: 'Buenos Aires · Argentina',
-    coordinates: [-58.3816, -34.6037],
-    projectIds: [3],
-    note: '锂矿调研覆盖',
-    color: '#f59e0b',
-    pulseColor: 'rgba(245,158,11,0.3)',
-    radius: 5,
-    type: 'research',
+    tagColor: 'bg-purple-50 text-purple-600',
+    tagLabel: '教育背景',
   },
 ];
 
-const LEGEND = [
-  { color: '#6366f1', label: '项目主要发生地' },
-  { color: '#a855f7', label: '教育背景' },
-  { color: '#f59e0b', label: '调研覆盖地区' },
-];
+// Check if a point is in the visible hemisphere given current rotation
+function isVisible(coordinates, rotation) {
+  const toRad = Math.PI / 180;
+  const lambda = coordinates[0] * toRad;
+  const phi    = coordinates[1] * toRad;
+  const rLambda = -rotation[0] * toRad;
+  const rPhi    = -rotation[1] * toRad;
+  const dot =
+    Math.sin(phi) * Math.sin(rPhi) +
+    Math.cos(phi) * Math.cos(rPhi) * Math.cos(lambda - rLambda);
+  return dot > 0;
+}
 
 export default function WorldMap() {
-  const [hovered, setHovered] = useState(null);
-  const navigate = useNavigate();
+  const [rotation, setRotation]       = useState(INITIAL_ROTATION);
+  const [isHovering, setIsHovering]   = useState(false);
+  const [isDragging, setIsDragging]   = useState(false);
+  const [hoveredMarker, setHoveredMarker] = useState(null);
 
-  const handleMarkerClick = (marker) => {
-    if (marker.projectIds.length > 0) {
-      // If only one project, go directly to its detail page
-      if (marker.projectIds.length === 1) {
-        navigate(`/projects/${marker.projectIds[0]}`);
-        window.scrollTo(0, 0);
-      } else {
-        // Scroll down to the project grid (anchor)
-        const el = document.getElementById('project-grid');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }
+  const rotationRef = useRef(INITIAL_ROTATION);
+  const lastPosRef  = useRef(null);
+  const animRef     = useRef(null);
+  const isDraggingRef = useRef(false);
+  const navigate    = useNavigate();
+
+  // ── auto-rotate on hover ──────────────────────────────────────────
+  useEffect(() => {
+    if (isHovering && !isDragging) {
+      const animate = () => {
+        rotationRef.current = [
+          rotationRef.current[0] - 0.12,
+          rotationRef.current[1],
+          rotationRef.current[2],
+        ];
+        setRotation([...rotationRef.current]);
+        animRef.current = requestAnimationFrame(animate);
+      };
+      animRef.current = requestAnimationFrame(animate);
+    } else {
+      if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; }
     }
-  };
+    return () => { if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; } };
+  }, [isHovering, isDragging]);
+
+  // ── drag handlers ─────────────────────────────────────────────────
+  const onMouseDown = useCallback((e) => {
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    lastPosRef.current = { x: e.clientX, y: e.clientY };
+    e.preventDefault();
+  }, []);
+
+  const onMouseMove = useCallback((e) => {
+    if (!isDraggingRef.current || !lastPosRef.current) return;
+    const dx = e.clientX - lastPosRef.current.x;
+    const dy = e.clientY - lastPosRef.current.y;
+    rotationRef.current = [
+      rotationRef.current[0] + dx * 0.45,
+      Math.max(-70, Math.min(70, rotationRef.current[1] - dy * 0.3)),
+      rotationRef.current[2],
+    ];
+    setRotation([...rotationRef.current]);
+    lastPosRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const onMouseUp = useCallback(() => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    lastPosRef.current = null;
+  }, []);
+
+  const onMouseEnter = useCallback(() => setIsHovering(true), []);
+  const onMouseLeave = useCallback(() => {
+    setIsHovering(false);
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    lastPosRef.current = null;
+  }, []);
+
+  // ── click: navigate to project ───────────────────────────────────
+  const handleMarkerClick = useCallback((marker) => {
+    if (marker.projectIds.length > 1) {
+      document.getElementById('project-grid')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (marker.projectIds.length === 1) {
+      navigate(`/projects/${marker.projectIds[0]}`);
+      window.scrollTo(0, 0);
+    }
+  }, [navigate]);
+
+  // ── visible markers ──────────────────────────────────────────────
+  const visibleMarkers = useMemo(
+    () => CITY_MARKERS.filter(m => isVisible(m.coordinates, rotation)),
+    [rotation],
+  );
 
   return (
-    <div className="relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 mb-12">
-      {/* Header */}
-      <div className="px-6 pt-5 pb-1 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-white tracking-wide">项目足迹</h2>
-          <p className="text-slate-400 text-xs mt-0.5">研究、创作与探索发生的地方</p>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          {LEGEND.map(l => (
-            <div key={l.label} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: l.color }} />
-              <span className="text-[11px] text-slate-400">{l.label}</span>
+    <div className="mb-12">
+      {/* Card */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        {/* Header row */}
+        <div className="px-6 pt-5 pb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-50">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">项目足迹</h2>
+            <p className="text-slate-400 text-xs mt-0.5">研究、创作与探索发生的地方</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+              <span className="text-xs text-slate-500">项目主要发生地</span>
             </div>
-          ))}
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+              <span className="text-xs text-slate-500">教育背景</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Map */}
-      <div className="relative select-none">
-        <ComposableMap
-          projection="geoNaturalEarth1"
-          projectionConfig={{ scale: 153, center: [20, 5] }}
-          style={{ width: '100%', height: 'auto' }}
-        >
-          <Geographies geography={GEO_URL}>
-            {({ geographies }) =>
-              geographies.map((geo) => (
-                <Geography
-                  key={geo.rsmKey}
-                  geography={geo}
-                  fill="#1e293b"
-                  stroke="#1e293b"   /* same as fill → borders invisible */
-                  strokeWidth={0.4}
-                  style={{
-                    default: { outline: 'none' },
-                    hover:   { outline: 'none', fill: '#1e293b' },
-                    pressed: { outline: 'none' },
-                  }}
-                />
-              ))
-            }
-          </Geographies>
+        {/* Body: globe + info side by side */}
+        <div className="flex flex-col md:flex-row items-center gap-6 p-6">
 
-          {CITY_MARKERS.map((marker) => (
-            <Marker
-              key={marker.id}
-              coordinates={marker.coordinates}
-              onMouseEnter={() => setHovered(marker)}
-              onMouseLeave={() => setHovered(null)}
-              onClick={() => handleMarkerClick(marker)}
-              style={{ cursor: marker.projectIds.length > 0 ? 'pointer' : 'default' }}
+          {/* ── Globe ─────────────────────────────────────────── */}
+          <div
+            className="relative flex-shrink-0 mx-auto select-none"
+            style={{ width: 340, height: 340, cursor: isDragging ? 'grabbing' : 'grab' }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+          >
+            <ComposableMap
+              projection="geoOrthographic"
+              projectionConfig={{ rotate: rotation, scale: 162 }}
+              width={340}
+              height={340}
+              style={{ width: '100%', height: '100%' }}
             >
-              {/* Animated pulse ring */}
-              <circle r={marker.radius + 8} fill={marker.pulseColor}>
-                <animate attributeName="r"
-                  from={marker.radius}
-                  to={marker.radius + 14}
-                  dur="2.4s"
-                  repeatCount="indefinite" />
-                <animate attributeName="fill-opacity"
-                  from="0.5"
-                  to="0"
-                  dur="2.4s"
-                  repeatCount="indefinite" />
-              </circle>
+              {/* Ocean (white sphere) + creates clip-path #rsm-sphere */}
+              <Sphere fill="#f8fafc" stroke="#e2e8f0" strokeWidth={1} />
 
-              {/* Solid dot */}
-              <circle
-                r={marker.radius}
-                fill={marker.color}
-                stroke="white"
-                strokeWidth={1.5}
-              />
+              {/* Grid lines */}
+              <Graticule stroke="#e8eef4" strokeWidth={0.4} />
 
-              {/* City label — only for main & education markers */}
-              {(marker.type === 'main' || marker.type === 'education') && (
-                <text
-                  textAnchor="middle"
-                  y={-(marker.radius + 6)}
-                  style={{
-                    fontSize: 9,
-                    fill: '#cbd5e1',
-                    fontWeight: 600,
-                    letterSpacing: '0.02em',
-                    paintOrder: 'stroke',
-                    stroke: '#0f172a',
-                    strokeWidth: 3,
-                    strokeLinecap: 'round',
-                    strokeLinejoin: 'round',
-                  }}
+              {/* Land — clipped to front hemisphere automatically by geoOrthographic */}
+              <g clipPath="url(#rsm-sphere)">
+                <Geographies geography={GEO_URL}>
+                  {({ geographies }) =>
+                    geographies.map((geo) => (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        fill="#dde6f0"
+                        stroke="#c8d6e5"
+                        strokeWidth={0.5}
+                        style={{
+                          default: { outline: 'none' },
+                          hover:   { outline: 'none' },
+                          pressed: { outline: 'none' },
+                        }}
+                      />
+                    ))
+                  }
+                </Geographies>
+              </g>
+
+              {/* City markers — only rendered when on visible side */}
+              {visibleMarkers.map((marker) => (
+                <Marker
+                  key={marker.id}
+                  coordinates={marker.coordinates}
+                  onMouseEnter={() => setHoveredMarker(marker)}
+                  onMouseLeave={() => setHoveredMarker(null)}
+                  onClick={() => handleMarkerClick(marker)}
                 >
-                  {marker.city}
-                </text>
-              )}
-            </Marker>
-          ))}
-        </ComposableMap>
+                  {/* Pulse ring */}
+                  <circle r={marker.radius + 7} fill={marker.color} fillOpacity={0.18}>
+                    <animate attributeName="r"
+                      from={marker.radius} to={marker.radius + 14}
+                      dur="2.2s" repeatCount="indefinite" />
+                    <animate attributeName="fill-opacity"
+                      from="0.4" to="0"
+                      dur="2.2s" repeatCount="indefinite" />
+                  </circle>
+                  {/* Core dot */}
+                  <circle
+                    r={marker.radius}
+                    fill={marker.color}
+                    stroke="white"
+                    strokeWidth={2}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  {/* City label */}
+                  <text
+                    textAnchor="middle"
+                    y={-(marker.radius + 9)}
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      fill: '#475569',
+                      paintOrder: 'stroke',
+                      stroke: 'white',
+                      strokeWidth: 3.5,
+                      strokeLinecap: 'round',
+                      strokeLinejoin: 'round',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {marker.city}
+                  </text>
+                </Marker>
+              ))}
+            </ComposableMap>
 
-        {/* Hover info panel — bottom-left overlay */}
-        <div
-          className={`absolute bottom-4 left-4 bg-slate-800/95 backdrop-blur-sm border border-slate-700 rounded-xl p-4 max-w-[220px] transition-all duration-200 pointer-events-none ${
-            hovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-          }`}
-        >
-          {hovered && (
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: hovered.color }}
-                />
-                <span className="font-bold text-white text-sm">{hovered.city}</span>
-              </div>
-              <p className="text-slate-400 text-[11px] mb-2">{hovered.subtitle}</p>
+            {/* Subtle 3-D lighting overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `radial-gradient(
+                  circle at 36% 32%,
+                  rgba(255,255,255,0.28) 0%,
+                  transparent 52%,
+                  rgba(71,85,105,0.13) 100%
+                )`,
+                borderRadius: '50%',
+              }}
+            />
 
-              {hovered.note && (
-                <p className="text-amber-400 text-[11px] mb-2">{hovered.note}</p>
-              )}
+            {/* Hover hint */}
+            <div
+              className={`absolute bottom-5 left-1/2 -translate-x-1/2 text-[11px] text-slate-400 bg-white/85 backdrop-blur-sm px-3 py-1 rounded-full border border-slate-100 pointer-events-none whitespace-nowrap transition-all duration-300 ${isHovering ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+            >
+              ⟳ 悬停旋转 · 拖拽手控
+            </div>
+          </div>
 
-              {hovered.projectIds.length > 0 && (
-                <div className="space-y-1">
-                  {hovered.projectIds.map((pid) => {
-                    const p = projects.find((x) => x.id === pid);
-                    return p ? (
-                      <div
-                        key={pid}
-                        className="text-[11px] text-slate-300 bg-slate-700/60 px-2 py-1 rounded-md leading-tight"
-                      >
-                        {p.title}
-                      </div>
-                    ) : null;
-                  })}
-                  <p className="text-indigo-400 text-[10px] mt-1.5 font-medium">点击查看项目 →</p>
+          {/* ── Right info panel ──────────────────────────────── */}
+          <div className="flex-1 w-full min-w-0">
+            {hoveredMarker ? (
+              /* Hovered city detail */
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: hoveredMarker.color }} />
+                  <span className="text-xl font-bold text-slate-900">{hoveredMarker.city}</span>
                 </div>
-              )}
-            </>
-          )}
+                <p className="text-slate-400 text-sm mb-1">{hoveredMarker.subtitle}</p>
+                {hoveredMarker.note && (
+                  <p className="text-sm font-semibold mb-4" style={{ color: hoveredMarker.color }}>
+                    {hoveredMarker.note}
+                  </p>
+                )}
+                {hoveredMarker.projectIds.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">关联项目</p>
+                    <div className="space-y-2">
+                      {hoveredMarker.projectIds.map((pid) => {
+                        const p = projects.find((x) => x.id === pid);
+                        return p ? (
+                          <div
+                            key={pid}
+                            onClick={() => { navigate(`/projects/${pid}`); window.scrollTo(0, 0); }}
+                            className="flex items-center gap-2.5 text-sm text-slate-700 bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                            {p.title}
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Default: city list */
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">城市足迹</p>
+                <div className="space-y-3">
+                  {CITY_MARKERS.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-4 px-4 py-4 rounded-2xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all cursor-pointer group"
+                      onClick={() => handleMarkerClick(m)}
+                      onMouseEnter={() => setHoveredMarker(m)}
+                      onMouseLeave={() => setHoveredMarker(null)}
+                    >
+                      {/* Color circle icon */}
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: m.color + '18' }}
+                      >
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: m.color }} />
+                      </div>
+
+                      {/* City info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-slate-900 text-sm">{m.city}</div>
+                        <div className="text-slate-400 text-xs mt-0.5">{m.subtitle}</div>
+                        {m.note && (
+                          <div className="text-xs mt-1 font-semibold" style={{ color: m.color }}>{m.note}</div>
+                        )}
+                      </div>
+
+                      {/* Tag */}
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg shrink-0 ${m.tagColor}`}>
+                        {m.tagLabel}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
