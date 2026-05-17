@@ -244,27 +244,17 @@ export default function WorldMap() {
           </ComposableMap>
         </div>
 
-        {/* ── Edge blend: thin linear fade at all 4 sides → container melts into page ── */}
-        {/* The sphere boundary is already off-screen (scale 240 + 200% wrapper).     */}
-        {/* This only softens the container rectangle edges, not the map content.      */}
+        {/* ── Circular edge fade — matches the sphere's round shape ──────────────── */}
+        {/* Container is ~1100×640. To get equal CSS-pixel fade radius (~264px):      */}
+        {/*   horiz 56% → 56%×550 = 308 px   vert 96% → 96%×320 = 307 px  ≈ equal   */}
+        {/* Transparent zone ends at 86% of those radii → ~265 px circle.            */}
+        {/* Sphere boundary is off-screen (scale 240 gives 586px > 550px half-width) */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: `linear-gradient(to bottom,
-            ${BG}                      0%,
-            rgba(248,250,252,0.55)     2%,
-            transparent                5%,
-            transparent               95%,
-            rgba(248,250,252,0.55)    98%,
-            ${BG}                    100%
-          )`,
-        }} />
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: `linear-gradient(to right,
-            ${BG}                      0%,
-            rgba(248,250,252,0.40)     2%,
-            transparent                4%,
-            transparent               96%,
-            rgba(248,250,252,0.40)    98%,
-            ${BG}                    100%
+          background: `radial-gradient(
+            ellipse 56% 96% at 50% 50%,
+            transparent              86%,
+            rgba(248,250,252,0.35)   93%,
+            ${BG}                   100%
           )`,
         }} />
 
