@@ -20,19 +20,21 @@ const BG = '#f8fafc';
 
 const CITY_MARKERS = [
   { id: 'melbourne', city: '墨尔本', subtitle: 'Melbourne · Australia',
-    coordinates: [144.9631, -37.8136], category: 'project', projectIds: [1,2,3,4,5], radius: 7 },
+    coordinates: [144.9631, -37.8136], categories: ['project', 'education'],
+    projectIds: [1,2,3,4,5], note: '博士就读地 · 项目主阵地', radius: 7 },
   { id: 'shanghai', city: '上海', subtitle: 'Shanghai · China',
-    coordinates: [121.4737, 31.2304], category: 'education', projectIds: [], note: '本科就读地', radius: 5 },
+    coordinates: [121.4737, 31.2304], categories: ['education'],
+    projectIds: [], note: '本科就读地', radius: 5 },
   { id: 'sydney', city: '悉尼', subtitle: 'Sydney · Australia',
-    coordinates: [151.2093, -33.8688], category: 'travel', projectIds: [], radius: 4 },
+    coordinates: [151.2093, -33.8688], categories: ['travel'], projectIds: [], radius: 4 },
   { id: 'hongkong', city: '香港', subtitle: 'Hong Kong · China',
-    coordinates: [114.1694, 22.3193], category: 'travel', projectIds: [], radius: 4 },
+    coordinates: [114.1694, 22.3193], categories: ['travel'], projectIds: [], radius: 4 },
   { id: 'tokyo', city: '东京', subtitle: 'Tokyo · Japan',
-    coordinates: [139.6917, 35.6895], category: 'travel', projectIds: [], radius: 4 },
+    coordinates: [139.6917, 35.6895], categories: ['travel'], projectIds: [], radius: 4 },
   { id: 'singapore', city: '新加坡', subtitle: 'Singapore',
-    coordinates: [103.8198, 1.3521], category: 'travel', projectIds: [], radius: 4 },
+    coordinates: [103.8198, 1.3521], categories: ['travel'], projectIds: [], radius: 4 },
   { id: 'beijing', city: '北京', subtitle: 'Beijing · China',
-    coordinates: [116.4074, 39.9042], category: 'research', projectIds: [], note: '行业调研', radius: 4 },
+    coordinates: [116.4074, 39.9042], categories: ['research'], projectIds: [], note: '行业调研', radius: 4 },
 ];
 
 function isVisible(coords, rotation) {
@@ -57,6 +59,7 @@ export default function WorldMap({ onMarkerSelect }) {
   const lastPosRef     = useRef(null);
   const isDraggingRef  = useRef(false);
   const animRef        = useRef(null);
+  const hideTimerRef   = useRef(null);   // delay before panel hides
   const navigate       = useNavigate();
 
   /* ── Zone-based auto-rotate ───────────────────────────────────── */
@@ -126,6 +129,8 @@ export default function WorldMap({ onMarkerSelect }) {
     isDraggingRef.current = false;
     setIsDragging(false);
     lastPosRef.current = null;
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setHoveredMarker(null);
   }, []);
 
   const handleMarkerClick = useCallback((marker) => {
@@ -152,11 +157,18 @@ export default function WorldMap({ onMarkerSelect }) {
   }, []);
 
   const visibleMarkers = useMemo(
-    () => CITY_MARKERS.filter(m => activeCategories.has(m.category) && isVisible(m.coordinates, rotation)),
+    () => CITY_MARKERS.filter(m =>
+      m.categories.some(c => activeCategories.has(c)) && isVisible(m.coordinates, rotation)
+    ),
     [rotation, activeCategories],
   );
 
   const getCatColor = (catId) => CATEGORIES.find(c => c.id === catId)?.color ?? '#6366f1';
+  // primary color = first active category for this marker
+  const markerColor = (m) => {
+    const first = m.categories.find(c => activeCategories.has(c));
+    return getCatColor(first ?? m.categories[0]);
+  };
 
   return (
     <div className="mb-12">
@@ -224,12 +236,17 @@ export default function WorldMap({ onMarkerSelect }) {
                 <Marker
                   key={m.id}
                   coordinates={m.coordinates}
-                  onMouseEnter={() => setHoveredMarker(m)}
-                  onMouseLeave={() => setHoveredMarker(null)}
+                  onMouseEnter={() => {
+                    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+                    setHoveredMarker(m);
+                  }}
+                  onMouseLeave={() => {
+                    hideTimerRef.current = setTimeout(() => setHoveredMarker(null), 320);
+                  }}
                   onClick={() => handleMarkerClick(m)}
                 >
                   {/* Pulse ring */}
-                  <circle r={m.radius + 7} fill={getCatColor(m.category)} fillOpacity={0.15}>
+                  <circle r={m.radius + 7} fill={markerColor(m)} fillOpacity={0.15}>
                     <animate attributeName="r"
                       from={m.radius} to={m.radius + 15}
                       dur="2.4s" repeatCount="indefinite" />
@@ -239,7 +256,7 @@ export default function WorldMap({ onMarkerSelect }) {
                   </circle>
                   {/* Core dot */}
                   <circle
-                    r={m.radius} fill={getCatColor(m.category)}
+                    r={m.radius} fill={markerColor(m)}
                     stroke="white" strokeWidth={2}
                     style={{ cursor: 'pointer' }}
                   />
@@ -304,33 +321,51 @@ export default function WorldMap({ onMarkerSelect }) {
 
         {/* ── Overlaid UI ───────────────────────────────────── */}
 
-        {/* Hovered city info — bottom-left glass panel */}
-        <div className={`absolute bottom-5 left-0 z-10 transition-all duration-200 ${hoveredMarker ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        {/* Hovered city info — bottom-left glass panel (sticky: stays open while mouse is inside) */}
+        <div
+          className={`absolute bottom-5 left-0 z-20 transition-all duration-200 ${hoveredMarker ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onMouseEnter={() => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+          onMouseLeave={() => { hideTimerRef.current = setTimeout(() => setHoveredMarker(null), 150); }}
+        >
           {hoveredMarker && (
-            <div className="bg-white/75 backdrop-blur-md border border-white/60 rounded-2xl px-4 py-3 shadow-sm max-w-[240px]">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getCatColor(hoveredMarker.category) }} />
-                <span className="font-bold text-slate-900 text-sm">{hoveredMarker.city}</span>
+            <div className="bg-white/90 backdrop-blur-md border border-white/60 rounded-2xl px-4 py-3 shadow-lg max-w-[260px]">
+              {/* City name */}
+              <p className="font-bold text-slate-900 text-sm mb-1">{hoveredMarker.city}</p>
+              <p className="text-slate-400 text-xs mb-2">{hoveredMarker.subtitle}</p>
+
+              {/* Category badges — shows all categories this city belongs to */}
+              <div className="flex flex-wrap gap-1 mb-2">
+                {hoveredMarker.categories.map(catId => {
+                  const cat = CATEGORIES.find(c => c.id === catId);
+                  return cat ? (
+                    <span key={catId}
+                      className="text-[10px] px-2 py-0.5 rounded-full text-white font-semibold"
+                      style={{ backgroundColor: cat.color }}>
+                      {cat.label}
+                    </span>
+                  ) : null;
+                })}
               </div>
-              <p className="text-slate-400 text-xs mb-1">{hoveredMarker.subtitle}</p>
+
               {hoveredMarker.note && (
-                <p className="text-xs font-semibold mb-2" style={{ color: getCatColor(hoveredMarker.category) }}>{hoveredMarker.note}</p>
+                <p className="text-xs text-slate-500 mb-2">{hoveredMarker.note}</p>
               )}
+
               {hoveredMarker.projectIds.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-1 border-t border-slate-100 pt-2 mt-1">
                   {hoveredMarker.projectIds.map(pid => {
                     const p = projects.find(x => x.id === pid);
                     return p ? (
                       <div
                         key={pid}
-                        className="text-[11px] text-slate-600 bg-slate-50/80 px-2.5 py-1 rounded-lg cursor-pointer hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                        className="text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                         onClick={(e) => { e.stopPropagation(); navigate(`/projects/${pid}`); window.scrollTo(0, 0); }}
                       >
                         {p.title}
                       </div>
                     ) : null;
                   })}
-                  <p className="text-[10px] text-indigo-400 mt-1.5 font-medium">点击查看详情 →</p>
+                  <p className="text-[10px] text-indigo-400 mt-1 font-medium">点击查看详情 →</p>
                 </div>
               )}
             </div>
