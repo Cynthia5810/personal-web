@@ -249,6 +249,7 @@ export default function WorldMap() {
         {/*   horiz 56% → 56%×550 = 308 px   vert 96% → 96%×320 = 307 px  ≈ equal   */}
         {/* Transparent zone ends at 86% of those radii → ~265 px circle.            */}
         {/* Sphere boundary is off-screen (scale 240 gives 586px > 550px half-width) */}
+        {/* Circular radial vignette — fades sphere edges */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
             ellipse 56% 96% at 50% 50%,
@@ -258,6 +259,17 @@ export default function WorldMap() {
             rgba(248,250,252,0.48)   86%,
             rgba(248,250,252,0.78)   94%,
             ${BG}                   100%
+          )`,
+        }} />
+        {/* Extra top/bottom fade — strengthens vertical edge blending */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `linear-gradient(to bottom,
+            rgba(248,250,252,0.85)  0%,
+            rgba(248,250,252,0.40)  6%,
+            transparent            12%,
+            transparent            88%,
+            rgba(248,250,252,0.40)  94%,
+            rgba(248,250,252,0.85) 100%
           )`,
         }} />
 
