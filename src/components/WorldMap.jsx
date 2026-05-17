@@ -171,7 +171,7 @@ export default function WorldMap({ onMarkerSelect }) {
   };
 
   return (
-    <div className="mb-12">
+    <div className="mb-12 max-w-[860px] mx-auto">
 
       {/* ── Seamless globe backdrop ─────────────────────────────── */}
       <div
