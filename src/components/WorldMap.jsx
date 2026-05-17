@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { projects } from '../data/projects';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-const INITIAL_ROTATION = [-128, -5, 0];
+// Centered exactly between Shanghai (31°N, 121°E) and Melbourne (38°S, 145°E)
+// midpoint ≈ −3.5°N, 133°E
+const INITIAL_ROTATION = [-133, 3.5, 0];
 // page background = slate-50
 const BG = '#f8fafc';
 
@@ -122,7 +124,7 @@ export default function WorldMap() {
       {/* ── Seamless globe backdrop ─────────────────────────────── */}
       <div
         className="relative overflow-hidden"
-        style={{ height: 360, cursor: isDragging ? 'grabbing' : 'grab' }}
+        style={{ height: 620, cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onMouseDown={onMouseDown}
@@ -130,18 +132,18 @@ export default function WorldMap() {
         onMouseUp={onMouseUp}
       >
 
-        {/* Globe SVG — centered + slightly oversized so sphere edge is hidden */}
+        {/* Globe SVG — 200% wide so sphere edge extends off-screen on all sides */}
         <div style={{
           position: 'absolute',
           top:  '50%',
           left: '50%',
-          width: '112%',                        /* wider than container → edges hidden */
-          transform: 'translate(-50%, -50%)',   /* centered exactly */
+          width: '200%',                        /* 2× container → sphere edge always off-screen */
+          transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
         }}>
           <ComposableMap
             projection="geoOrthographic"
-            projectionConfig={{ rotate: rotation, scale: 440 }}
+            projectionConfig={{ rotate: rotation, scale: 240 }}
             width={900}
             height={600}
             style={{ width: '100%', height: 'auto', display: 'block' }}
@@ -220,19 +222,19 @@ export default function WorldMap() {
           </ComposableMap>
         </div>
 
-        {/* ── Vignette — fades all edges into page background ── */}
-        {/* Radial gradient: transparent center → slate-50 edges */}
+        {/* ── Vignette — only the outermost edge fades into page background ── */}
+        {/* Transparent in the big center (70%) → short fade to solid at edges only */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
-            ellipse 82% 88% at 50% 50%,
-            transparent       26%,
-            rgba(248,250,252,0.55) 50%,
-            ${BG}             68%
+            ellipse 90% 88% at 50% 50%,
+            transparent              68%,
+            rgba(248,250,252,0.45)   82%,
+            ${BG}                    93%
           )`,
         }} />
-        {/* Inset box-shadow for clean 4-edge fade */}
+        {/* Thin edge shadow — just blurs the very rim */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          boxShadow: `inset 0 0 90px 55px ${BG}`,
+          boxShadow: `inset 0 0 28px 8px ${BG}`,
         }} />
 
         {/* ── Overlaid UI ───────────────────────────────────── */}
