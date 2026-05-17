@@ -173,9 +173,6 @@ export default function WorldMap() {
             <Sphere fill="transparent" stroke="transparent" strokeWidth={0} />
 
             <g clipPath="url(#rsm-sphere)">
-              {/* Grid lines — subtle, show globe curvature */}
-              <Graticule stroke="#cfddf0" strokeWidth={0.55} />
-
               {/* Land masses */}
               <Geographies geography={GEO_URL}>
                 {({ geographies }) =>
