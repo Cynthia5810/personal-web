@@ -6,7 +6,7 @@ import { projects } from '../data/projects';
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 // Centered exactly between Shanghai (31°N, 121°E) and Melbourne (38°S, 145°E)
 // midpoint ≈ −3.5°N, 133°E
-const INITIAL_ROTATION = [-133, 0, 0];
+const INITIAL_ROTATION = [-133, -8, 0];
 // page background = slate-50
 const BG = '#f8fafc';
 
@@ -145,7 +145,7 @@ export default function WorldMap() {
       <div
         ref={containerRef}
         className="relative overflow-hidden"
-        style={{ height: 520, cursor: isDragging ? 'grabbing' : 'grab' }}
+        style={{ height: 580, cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onMouseDown={onMouseDown}
@@ -243,19 +243,34 @@ export default function WorldMap() {
           </ComposableMap>
         </div>
 
-        {/* ── Vignette — only the outermost edge fades into page background ── */}
-        {/* Transparent in the big center (70%) → short fade to solid at edges only */}
+        {/* ── Layer 1: edge fade — hides sphere boundary, blends into page ── */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
-            ellipse 88% 68% at 50% 50%,
-            transparent              60%,
-            rgba(248,250,252,0.45)   78%,
-            ${BG}                    92%
+            ellipse 94% 92% at 50% 50%,
+            transparent               74%,
+            rgba(248,250,252,0.18)    84%,
+            rgba(248,250,252,0.60)    92%,
+            ${BG}                     100%
           )`,
         }} />
-        {/* Thin edge shadow — just blurs the very rim */}
+
+        {/* ── Layer 2: sphere catch-light — top-left glow for 3-D depth ── */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          boxShadow: `inset 0 0 28px 8px ${BG}`,
+          background: `radial-gradient(
+            ellipse 55% 48% at 36% 28%,
+            rgba(255,255,255,0.11) 0%,
+            transparent            70%
+          )`,
+        }} />
+
+        {/* ── Layer 3: subtle rim shadow — reinforces sphere curvature ── */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `radial-gradient(
+            ellipse 90% 88% at 50% 50%,
+            transparent               62%,
+            rgba(100,120,160,0.045)   82%,
+            transparent               100%
+          )`,
         }} />
 
         {/* ── Overlaid UI ───────────────────────────────────── */}
