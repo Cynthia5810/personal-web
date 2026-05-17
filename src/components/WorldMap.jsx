@@ -6,7 +6,7 @@ import { projects } from '../data/projects';
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 // Centered exactly between Shanghai (31°N, 121°E) and Melbourne (38°S, 145°E)
 // midpoint ≈ −3.5°N, 133°E
-const INITIAL_ROTATION = [-133, -5, 0];
+const INITIAL_ROTATION = [-133, -4, 0];
 // page background = slate-50
 const BG = '#f8fafc';
 
@@ -145,7 +145,7 @@ export default function WorldMap() {
       <div
         ref={containerRef}
         className="relative overflow-hidden"
-        style={{ height: 620, cursor: isDragging ? 'grabbing' : 'grab' }}
+        style={{ height: 640, cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onMouseDown={onMouseDown}
@@ -153,7 +153,8 @@ export default function WorldMap() {
         onMouseUp={onMouseUp}
       >
 
-        {/* Globe SVG — 200% wide; CSS mask fades sphere edge into page background */}
+        {/* Globe SVG — 200% wide so sphere boundary extends off-screen (scale 240
+            gives radius ≈ 586 px CSS > 550 px half-container → no visible sphere rim) */}
         <div style={{
           position: 'absolute',
           top:  '50%',
@@ -161,25 +162,20 @@ export default function WorldMap() {
           width: '200%',
           transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
-          /* mask percentages relative to this 2200×1467 wrapper:
-             33% horiz → 363 px  ≈ globe radius (354 px) → sphere rim fades out
-             40% vert  → 293 px  ≈ enough to reveal Shanghai & most of Australia  */
-          WebkitMaskImage: 'radial-gradient(ellipse 33% 40% at 50% 50%, black 68%, rgba(0,0,0,0.45) 84%, transparent 100%)',
-          maskImage:        'radial-gradient(ellipse 33% 40% at 50% 50%, black 68%, rgba(0,0,0,0.45) 84%, transparent 100%)',
         }}>
           <ComposableMap
             projection="geoOrthographic"
-            projectionConfig={{ rotate: rotation, scale: 145 }}
+            projectionConfig={{ rotate: rotation, scale: 240 }}
             width={900}
             height={600}
             style={{ width: '100%', height: 'auto', display: 'block' }}
           >
-            {/* Sphere — transparent ocean; creates clip-path #rsm-sphere */}
+            {/* Sphere — transparent; creates clip-path #rsm-sphere */}
             <Sphere fill="transparent" stroke="transparent" strokeWidth={0} />
 
             <g clipPath="url(#rsm-sphere)">
-              {/* Grid lines */}
-              <Graticule stroke="#cfddf0" strokeWidth={0.6} />
+              {/* Graticule — subtle grid for curvature feel */}
+              <Graticule stroke="#cfddf0" strokeWidth={0.55} />
 
               {/* Land masses */}
               <Geographies geography={GEO_URL}>
@@ -248,11 +244,35 @@ export default function WorldMap() {
           </ComposableMap>
         </div>
 
-        {/* ── Subtle catch-light — top-left glow for sphere depth ── */}
+        {/* ── Edge blend: thin linear fade at all 4 sides → container melts into page ── */}
+        {/* The sphere boundary is already off-screen (scale 240 + 200% wrapper).     */}
+        {/* This only softens the container rectangle edges, not the map content.      */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `linear-gradient(to bottom,
+            ${BG}                      0%,
+            rgba(248,250,252,0.55)     2%,
+            transparent                5%,
+            transparent               95%,
+            rgba(248,250,252,0.55)    98%,
+            ${BG}                    100%
+          )`,
+        }} />
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `linear-gradient(to right,
+            ${BG}                      0%,
+            rgba(248,250,252,0.40)     2%,
+            transparent                4%,
+            transparent               96%,
+            rgba(248,250,252,0.40)    98%,
+            ${BG}                    100%
+          )`,
+        }} />
+
+        {/* ── Catch-light — faint top-left highlight for sphere depth ── */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
             ellipse 50% 44% at 35% 28%,
-            rgba(255,255,255,0.09) 0%,
+            rgba(255,255,255,0.08) 0%,
             transparent            65%
           )`,
         }} />
