@@ -169,8 +169,18 @@ export default function WorldMap() {
             height={600}
             style={{ width: '100%', height: 'auto', display: 'block' }}
           >
-            {/* Invisible sphere — only used to create clip-path #rsm-sphere */}
-            <Sphere fill="transparent" stroke="transparent" strokeWidth={0} />
+            {/* Ocean gradient — centre light-blue fading to page background at rim */}
+            <defs>
+              <radialGradient id="oceanGrad" cx="42%" cy="36%" r="58%">
+                <stop offset="0%"   stopColor="#e4f0f8" />
+                <stop offset="45%"  stopColor="#dae8f4" />
+                <stop offset="78%"  stopColor="#e8f2f8" />
+                <stop offset="100%" stopColor="#f8fafc" />
+              </radialGradient>
+            </defs>
+
+            {/* Sphere — filled with ocean gradient; also creates clip-path #rsm-sphere */}
+            <Sphere fill="url(#oceanGrad)" stroke="none" strokeWidth={0} />
 
             <g clipPath="url(#rsm-sphere)">
               {/* Land masses */}
