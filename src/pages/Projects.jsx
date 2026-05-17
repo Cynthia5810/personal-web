@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Filter, ExternalLink, ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import WorldMap from '../components/WorldMap';
 import { projects } from '../data/projects';
 
 function ProjectDetail({ project }) {
@@ -66,8 +67,11 @@ function ProjectList() {
         </div>
         <p className="text-slate-500 mb-10">涵盖 AI 产品、行业调研、学术科研与创客生活。</p>
 
+        {/* 世界地图 */}
+        <WorldMap />
+
         {/* 筛选器 */}
-        <div className="flex items-center gap-2 mb-10 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+        <div id="project-grid" className="flex items-center gap-2 mb-10 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
           <Filter size={18} className="text-slate-400 mr-2 shrink-0" />
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveFilter(cat)}
