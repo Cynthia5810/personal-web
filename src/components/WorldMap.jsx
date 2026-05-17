@@ -252,8 +252,11 @@ export default function WorldMap() {
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
             ellipse 56% 96% at 50% 50%,
-            transparent              86%,
-            rgba(248,250,252,0.35)   93%,
+            transparent              55%,
+            rgba(248,250,252,0.07)   65%,
+            rgba(248,250,252,0.20)   75%,
+            rgba(248,250,252,0.48)   86%,
+            rgba(248,250,252,0.78)   94%,
             ${BG}                   100%
           )`,
         }} />
