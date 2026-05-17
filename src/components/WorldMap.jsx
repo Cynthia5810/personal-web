@@ -43,10 +43,11 @@ function isVisible(coords, rotation) {
 }
 
 export default function WorldMap() {
-  const [rotation, setRotation]         = useState(INITIAL_ROTATION);
-  const [isHovering, setIsHovering]     = useState(false);
-  const [isDragging, setIsDragging]     = useState(false);
+  const [rotation, setRotation]           = useState(INITIAL_ROTATION);
+  const [rotationZone, setRotationZone]   = useState(0); // -1 left, 0 stop, +1 right
+  const [isDragging, setIsDragging]       = useState(false);
   const [hoveredMarker, setHoveredMarker] = useState(null);
+  const [isHovering, setIsHovering]       = useState(false);
 
   const rotationRef    = useRef(INITIAL_ROTATION);
   const lastPosRef     = useRef(null);
@@ -54,11 +55,16 @@ export default function WorldMap() {
   const animRef        = useRef(null);
   const navigate       = useNavigate();
 
-  /* ── Auto-rotate on hover ─────────────────────────────────────── */
+  /* ── Zone-based auto-rotate ───────────────────────────────────── */
+  // zone = +1 → rotate right (leftmost 25%), zone = -1 → rotate left (rightmost 25%), 0 = stop
   useEffect(() => {
-    if (isHovering && !isDragging) {
+    if (rotationZone !== 0 && !isDragging) {
       const tick = () => {
-        rotationRef.current = [rotationRef.current[0] - 0.12, rotationRef.current[1], rotationRef.current[2]];
+        rotationRef.current = [
+          rotationRef.current[0] + rotationZone * 0.15,
+          rotationRef.current[1],
+          rotationRef.current[2],
+        ];
         setRotation([...rotationRef.current]);
         animRef.current = requestAnimationFrame(tick);
       };
@@ -67,7 +73,7 @@ export default function WorldMap() {
       if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; }
     }
     return () => { if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; } };
-  }, [isHovering, isDragging]);
+  }, [rotationZone, isDragging]);
 
   /* ── Drag handlers ────────────────────────────────────────────── */
   const onMouseDown = useCallback((e) => {
@@ -78,16 +84,27 @@ export default function WorldMap() {
   }, []);
 
   const onMouseMove = useCallback((e) => {
-    if (!isDraggingRef.current || !lastPosRef.current) return;
-    const dx = e.clientX - lastPosRef.current.x;
-    const dy = e.clientY - lastPosRef.current.y;
-    rotationRef.current = [
-      rotationRef.current[0] + dx * 0.45,
-      Math.max(-70, Math.min(70, rotationRef.current[1] - dy * 0.3)),
-      rotationRef.current[2],
-    ];
-    setRotation([...rotationRef.current]);
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
+    // Drag handling
+    if (isDraggingRef.current && lastPosRef.current) {
+      const dx = e.clientX - lastPosRef.current.x;
+      const dy = e.clientY - lastPosRef.current.y;
+      rotationRef.current = [
+        rotationRef.current[0] + dx * 0.45,
+        Math.max(-70, Math.min(70, rotationRef.current[1] - dy * 0.3)),
+        rotationRef.current[2],
+      ];
+      setRotation([...rotationRef.current]);
+      lastPosRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    // Zone detection: left 25% → +1, right 25% → -1, middle 50% → 0
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      if (ratio < 0.25) setRotationZone(1);
+      else if (ratio > 0.75) setRotationZone(-1);
+      else setRotationZone(0);
+    }
   }, []);
 
   const onMouseUp = useCallback(() => {
@@ -96,9 +113,12 @@ export default function WorldMap() {
     lastPosRef.current = null;
   }, []);
 
+  const containerRef = useRef(null);
+
   const onMouseEnter = useCallback(() => setIsHovering(true), []);
   const onMouseLeave = useCallback(() => {
     setIsHovering(false);
+    setRotationZone(0);
     isDraggingRef.current = false;
     setIsDragging(false);
     lastPosRef.current = null;
@@ -123,6 +143,7 @@ export default function WorldMap() {
 
       {/* ── Seamless globe backdrop ─────────────────────────────── */}
       <div
+        ref={containerRef}
         className="relative overflow-hidden"
         style={{ height: 620, cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseEnter={onMouseEnter}
@@ -227,9 +248,9 @@ export default function WorldMap() {
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `radial-gradient(
             ellipse 90% 88% at 50% 50%,
-            transparent              68%,
-            rgba(248,250,252,0.45)   82%,
-            ${BG}                    93%
+            transparent              60%,
+            rgba(248,250,252,0.45)   76%,
+            ${BG}                    90%
           )`,
         }} />
         {/* Thin edge shadow — just blurs the very rim */}
@@ -288,9 +309,17 @@ export default function WorldMap() {
           )}
         </div>
 
+        {/* Zone rotation arrows — left/right edges */}
+        <div className={`absolute left-0 top-0 bottom-0 w-1/4 z-10 flex items-center justify-start pl-3 pointer-events-none transition-opacity duration-200 ${isHovering && rotationZone === 1 ? 'opacity-100' : 'opacity-0'}`}>
+          <span className="text-slate-400 text-xl select-none">‹</span>
+        </div>
+        <div className={`absolute right-0 top-0 bottom-0 w-1/4 z-10 flex items-center justify-end pr-3 pointer-events-none transition-opacity duration-200 ${isHovering && rotationZone === -1 ? 'opacity-100' : 'opacity-0'}`}>
+          <span className="text-slate-400 text-xl select-none">›</span>
+        </div>
+
         {/* Rotation hint — bottom-right */}
         <div className={`absolute bottom-5 right-0 z-10 text-[11px] text-slate-400 pointer-events-none transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0'}`}>
-          ⟳ 悬停旋转 · 拖拽手控
+          ‹ 边缘旋转 · 拖拽手控 ›
         </div>
       </div>
 
