@@ -4,6 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { projects } from '../data/projects';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+
+const CATEGORIES = [
+  { id: 'project',   label: '项目发生地', color: '#6366f1' },
+  { id: 'education', label: '教育背景',   color: '#a855f7' },
+  { id: 'travel',    label: '游览足迹',   color: '#f59e0b' },
+  { id: 'research',  label: '调研地点',   color: '#10b981' },
+];
+
 // Centered exactly between Shanghai (31°N, 121°E) and Melbourne (38°S, 145°E)
 // midpoint ≈ −3.5°N, 133°E
 const INITIAL_ROTATION = [-133, -4, 0];
@@ -11,25 +19,20 @@ const INITIAL_ROTATION = [-133, -4, 0];
 const BG = '#f8fafc';
 
 const CITY_MARKERS = [
-  {
-    id: 'melbourne',
-    city: '墨尔本',
-    subtitle: 'Melbourne · Australia',
-    coordinates: [144.9631, -37.8136],
-    projectIds: [1, 2, 3, 4, 5],
-    color: '#6366f1',
-    radius: 7,
-  },
-  {
-    id: 'shanghai',
-    city: '上海',
-    subtitle: 'Shanghai · China',
-    coordinates: [121.4737, 31.2304],
-    projectIds: [],
-    note: '本科就读地',
-    color: '#a855f7',
-    radius: 5,
-  },
+  { id: 'melbourne', city: '墨尔本', subtitle: 'Melbourne · Australia',
+    coordinates: [144.9631, -37.8136], category: 'project', projectIds: [1,2,3,4,5], radius: 7 },
+  { id: 'shanghai', city: '上海', subtitle: 'Shanghai · China',
+    coordinates: [121.4737, 31.2304], category: 'education', projectIds: [], note: '本科就读地', radius: 5 },
+  { id: 'sydney', city: '悉尼', subtitle: 'Sydney · Australia',
+    coordinates: [151.2093, -33.8688], category: 'travel', projectIds: [], radius: 4 },
+  { id: 'hongkong', city: '香港', subtitle: 'Hong Kong · China',
+    coordinates: [114.1694, 22.3193], category: 'travel', projectIds: [], radius: 4 },
+  { id: 'tokyo', city: '东京', subtitle: 'Tokyo · Japan',
+    coordinates: [139.6917, 35.6895], category: 'travel', projectIds: [], radius: 4 },
+  { id: 'singapore', city: '新加坡', subtitle: 'Singapore',
+    coordinates: [103.8198, 1.3521], category: 'travel', projectIds: [], radius: 4 },
+  { id: 'beijing', city: '北京', subtitle: 'Beijing · China',
+    coordinates: [116.4074, 39.9042], category: 'research', projectIds: [], note: '行业调研', radius: 4 },
 ];
 
 function isVisible(coords, rotation) {
@@ -42,12 +45,13 @@ function isVisible(coords, rotation) {
   return dot > 0;
 }
 
-export default function WorldMap() {
+export default function WorldMap({ onMarkerSelect }) {
   const [rotation, setRotation]           = useState(INITIAL_ROTATION);
   const [rotationZone, setRotationZone]   = useState(0); // -1 left, 0 stop, +1 right
   const [isDragging, setIsDragging]       = useState(false);
   const [hoveredMarker, setHoveredMarker] = useState(null);
   const [isHovering, setIsHovering]       = useState(false);
+  const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORIES.map(c => c.id)));
 
   const rotationRef    = useRef(INITIAL_ROTATION);
   const lastPosRef     = useRef(null);
@@ -125,18 +129,34 @@ export default function WorldMap() {
   }, []);
 
   const handleMarkerClick = useCallback((marker) => {
-    if (marker.projectIds.length > 1) {
+    onMarkerSelect?.(marker);
+    if (marker.projectIds?.length > 1) {
       document.getElementById('project-grid')?.scrollIntoView({ behavior: 'smooth' });
-    } else if (marker.projectIds.length === 1) {
+    } else if (marker.projectIds?.length === 1) {
       navigate(`/projects/${marker.projectIds[0]}`);
       window.scrollTo(0, 0);
     }
-  }, [navigate]);
+  }, [navigate, onMarkerSelect]);
+
+  const toggleCategory = useCallback((catId) => {
+    setActiveCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) {
+        if (next.size === 1) return prev; // keep at least one active
+        next.delete(catId);
+      } else {
+        next.add(catId);
+      }
+      return next;
+    });
+  }, []);
 
   const visibleMarkers = useMemo(
-    () => CITY_MARKERS.filter(m => isVisible(m.coordinates, rotation)),
-    [rotation],
+    () => CITY_MARKERS.filter(m => activeCategories.has(m.category) && isVisible(m.coordinates, rotation)),
+    [rotation, activeCategories],
   );
+
+  const getCatColor = (catId) => CATEGORIES.find(c => c.id === catId)?.color ?? '#6366f1';
 
   return (
     <div className="mb-12">
@@ -209,7 +229,7 @@ export default function WorldMap() {
                   onClick={() => handleMarkerClick(m)}
                 >
                   {/* Pulse ring */}
-                  <circle r={m.radius + 7} fill={m.color} fillOpacity={0.15}>
+                  <circle r={m.radius + 7} fill={getCatColor(m.category)} fillOpacity={0.15}>
                     <animate attributeName="r"
                       from={m.radius} to={m.radius + 15}
                       dur="2.4s" repeatCount="indefinite" />
@@ -219,7 +239,7 @@ export default function WorldMap() {
                   </circle>
                   {/* Core dot */}
                   <circle
-                    r={m.radius} fill={m.color}
+                    r={m.radius} fill={getCatColor(m.category)}
                     stroke="white" strokeWidth={2}
                     style={{ cursor: 'pointer' }}
                   />
@@ -284,33 +304,17 @@ export default function WorldMap() {
 
         {/* ── Overlaid UI ───────────────────────────────────── */}
 
-        {/* Header — top-left */}
-        <div className="absolute top-5 left-0 pointer-events-none z-10">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">项目足迹</p>
-          <p className="text-slate-400 text-[11px]">研究、创作与探索发生的地方</p>
-        </div>
-
-        {/* Legend — top-right */}
-        <div className="absolute top-5 right-0 flex items-center gap-4 pointer-events-none z-10">
-          {[{ color: '#6366f1', label: '项目发生地' }, { color: '#a855f7', label: '教育背景' }].map(l => (
-            <div key={l.label} className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color }} />
-              <span className="text-[11px] text-slate-400">{l.label}</span>
-            </div>
-          ))}
-        </div>
-
         {/* Hovered city info — bottom-left glass panel */}
         <div className={`absolute bottom-5 left-0 z-10 transition-all duration-200 ${hoveredMarker ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {hoveredMarker && (
             <div className="bg-white/75 backdrop-blur-md border border-white/60 rounded-2xl px-4 py-3 shadow-sm max-w-[240px]">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: hoveredMarker.color }} />
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getCatColor(hoveredMarker.category) }} />
                 <span className="font-bold text-slate-900 text-sm">{hoveredMarker.city}</span>
               </div>
               <p className="text-slate-400 text-xs mb-1">{hoveredMarker.subtitle}</p>
               {hoveredMarker.note && (
-                <p className="text-xs font-semibold mb-2" style={{ color: hoveredMarker.color }}>{hoveredMarker.note}</p>
+                <p className="text-xs font-semibold mb-2" style={{ color: getCatColor(hoveredMarker.category) }}>{hoveredMarker.note}</p>
               )}
               {hoveredMarker.projectIds.length > 0 && (
                 <div className="space-y-1">
@@ -339,6 +343,29 @@ export default function WorldMap() {
         </div>
         <div className={`absolute right-0 top-0 bottom-0 w-1/4 z-10 flex items-center justify-end pr-3 pointer-events-none transition-opacity duration-200 ${isHovering && rotationZone === -1 ? 'opacity-100' : 'opacity-0'}`}>
           <span className="text-slate-400 text-xl select-none">›</span>
+        </div>
+
+        {/* Category filter pills */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 flex-wrap justify-center">
+          {CATEGORIES.map(cat => {
+            const active = activeCategories.has(cat.id);
+            return (
+              <button
+                key={cat.id}
+                onClick={(e) => { e.stopPropagation(); toggleCategory(cat.id); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all duration-200 select-none cursor-pointer ${
+                  active ? 'text-white shadow-md' : 'bg-white/60 text-slate-400 backdrop-blur-sm border border-white/40'
+                }`}
+                style={active ? { backgroundColor: cat.color } : {}}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: active ? 'rgba(255,255,255,0.75)' : cat.color }}
+                />
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Rotation hint — bottom-right */}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Filter, ExternalLink, ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -54,9 +54,29 @@ function ProjectDetail({ project }) {
 
 function ProjectList() {
   const [activeFilter, setActiveFilter] = useState('All');
+  const [cityFilter, setCityFilter] = useState(null);
   const navigate = useNavigate();
   const categories = ['All', ...new Set(projects.map(p => p.category))];
-  const filtered = activeFilter === 'All' ? projects : projects.filter(p => p.category === activeFilter);
+
+  const handleMarkerSelect = useCallback((marker) => {
+    if (marker.projectIds?.length > 0) {
+      setCityFilter(marker.city);
+      setActiveFilter('All');
+      setTimeout(() => {
+        document.getElementById('project-grid')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, []);
+
+  const filtered = useMemo(() => {
+    let result = cityFilter
+      ? projects.filter(p => p.location?.city === cityFilter)
+      : projects;
+    if (activeFilter !== 'All') {
+      result = result.filter(p => p.category === activeFilter);
+    }
+    return result;
+  }, [cityFilter, activeFilter]);
 
   return (
     <div className="pt-32 pb-24 px-6 min-h-screen bg-slate-50">
@@ -68,10 +88,20 @@ function ProjectList() {
         <p className="text-slate-500 mb-10">涵盖 AI 产品、行业调研、学术科研与创客生活。</p>
 
         {/* 世界地图 */}
-        <WorldMap />
+        <WorldMap onMarkerSelect={handleMarkerSelect} />
 
         {/* 筛选器 */}
         <div id="project-grid" className="flex items-center gap-2 mb-10 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+          {cityFilter && (
+            <div className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-white shadow-md mr-2 shrink-0"
+              style={{ backgroundColor: '#6366f1' }}>
+              <span>📍 {cityFilter}</span>
+              <button
+                onClick={() => setCityFilter(null)}
+                className="ml-1 text-indigo-200 hover:text-white transition-colors font-bold leading-none"
+              >×</button>
+            </div>
+          )}
           <Filter size={18} className="text-slate-400 mr-2 shrink-0" />
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveFilter(cat)}
