@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import Projects from './pages/Projects';
 import Timeline from './pages/Timeline';
 import ChatWidget from './components/ChatWidget';
+import MusicPlayer from './components/MusicPlayer';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/timeline"      element={<Timeline />} />
         </Routes>
         <ChatWidget />
+        <MusicPlayer />
       </div>
     </HashRouter>
   );
