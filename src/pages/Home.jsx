@@ -23,7 +23,10 @@ export default function Home() {
     const fn = () => {
       for (const id of [...ids].reverse()) {
         const el = document.getElementById(id);
-        if (el && window.scrollY >= el.offsetTop - 160) { setActiveSection(id); break; }
+        if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.5) {
+          setActiveSection(id);
+          break;
+        }
       }
     };
     window.addEventListener('scroll', fn);
