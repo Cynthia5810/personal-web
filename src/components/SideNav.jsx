@@ -58,14 +58,20 @@ export default function SideNav({ activeSection }) {
               </div>
 
               {/* 圆点 */}
-              <div className={`
-                rounded-full transition-all duration-300
-                ${isActive
-                  ? 'w-3.5 h-3.5 border-2 border-indigo-500 bg-transparent shadow-md shadow-indigo-200/60'
-                  : isHovered
-                  ? 'w-2.5 h-2.5 bg-indigo-400'
-                  : 'w-2 h-2 bg-slate-200'}
-              `} />
+              <div
+                className={`rounded-full transition-all duration-300 ${
+                  isActive
+                    ? 'bg-transparent'
+                    : isHovered
+                    ? 'w-2.5 h-2.5 bg-indigo-400'
+                    : 'w-2 h-2 bg-slate-200'
+                }`}
+                style={isActive ? {
+                  width: 10, height: 10,
+                  border: '2.5px solid #6366f1',
+                  boxShadow: '0 0 6px rgba(99,102,241,0.35)',
+                } : {}}
+              />
             </div>
 
           </div>
