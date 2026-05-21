@@ -15,8 +15,10 @@ export default function SideNav({ activeSection }) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const hidden = activeSection === 'home';
+
   return (
-    <div className="fixed right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center select-none">
+    <div className={`fixed right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center select-none transition-all duration-500 ${hidden ? 'opacity-0 pointer-events-none translate-x-3' : 'opacity-100 translate-x-0'}`}>
       {SECTIONS.map((sec, i) => {
         const isActive  = activeSection === sec.id;
         const isHovered = hoveredId === sec.id;
