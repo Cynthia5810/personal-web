@@ -4,6 +4,7 @@ import { Mail, Briefcase, ExternalLink, ArrowRight } from 'lucide-react';
 import MolecularBackground from '../components/MolecularBackground';
 import Testimonials from '../components/Testimonials';
 import Navbar from '../components/Navbar';
+import SideNav from '../components/SideNav';
 import Footer from '../components/Footer';
 import { featuredProjects } from '../data/projects';
 
@@ -18,7 +19,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const ids = ['home', 'about', 'projects', 'contact'];
+    const ids = ['home', 'about', 'projects', 'testimonials', 'contact'];
     const fn = () => {
       for (const id of [...ids].reverse()) {
         const el = document.getElementById(id);
@@ -35,7 +36,8 @@ export default function Home() {
 
   return (
     <>
-      <Navbar activeSection={activeSection} />
+      <Navbar />
+      <SideNav activeSection={activeSection} />
 
       {/* ── Hero ── */}
       <section id="home" className="pt-24 pb-12 md:pt-32 md:pb-20 px-4 md:px-8 flex items-center min-h-screen relative overflow-hidden bg-[#eaf0fb]">
@@ -176,7 +178,9 @@ export default function Home() {
       </section>
 
       {/* ── 评价滚动带 ── */}
-      <Testimonials />
+      <section id="testimonials">
+        <Testimonials />
+      </section>
 
       {/* ── 联系合作 ── */}
       <section id="contact" className="pt-32 pb-32 px-6 bg-white text-center">

@@ -3,14 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { label: '关于我',   path: '/',          hash: 'about'    },
-  { label: '精选产出', path: '/',          hash: 'projects' },
-  { label: '全部项目', path: '/projects',  hash: ''         },
-  { label: '成长历程', path: '/timeline',  hash: ''         },
-  { label: '联系合作', path: '/',          hash: 'contact'  },
+  { label: '关于我',   path: '/'         },
+  { label: '全部产出', path: '/projects'  },
+  { label: '成长历程', path: '/timeline'  },
 ];
 
-export default function Navbar({ activeSection = '' }) {
+export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
@@ -24,26 +22,11 @@ export default function Navbar({ activeSection = '' }) {
 
   const handleNav = (item) => {
     setMobileOpen(false);
-    if (item.path === '/' && item.hash) {
-      if (location.pathname !== '/') {
-        navigate('/');
-        setTimeout(() => {
-          document.getElementById(item.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      } else {
-        document.getElementById(item.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    } else {
-      navigate(item.path);
-      window.scrollTo(0, 0);
-    }
+    navigate(item.path);
+    window.scrollTo(0, 0);
   };
 
-  const isActive = (item) => {
-    if (item.path !== '/' && location.pathname === item.path) return true;
-    if (item.path === '/' && item.hash && location.pathname === '/' && activeSection === item.hash) return true;
-    return false;
-  };
+  const isActive = (item) => location.pathname === item.path;
 
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/85 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
