@@ -61,10 +61,10 @@ export default function SideNav({ activeSection }) {
               <div className={`
                 rounded-full transition-all duration-300
                 ${isActive
-                  ? 'w-3 h-3 bg-indigo-500 shadow-lg shadow-indigo-200/60'
+                  ? 'w-3.5 h-3.5 border-2 border-indigo-500 bg-transparent shadow-md shadow-indigo-200/60'
                   : isHovered
                   ? 'w-2.5 h-2.5 bg-indigo-400'
-                  : 'w-2 h-2 bg-slate-200 hover:bg-slate-300'}
+                  : 'w-2 h-2 bg-slate-200'}
               `} />
             </div>
 
