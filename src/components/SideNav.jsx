@@ -68,8 +68,8 @@ export default function SideNav({ activeSection }) {
                 }`}
                 style={isActive ? {
                   width: 10, height: 10,
-                  border: '2.5px solid #6366f1',
-                  boxShadow: '0 0 6px rgba(99,102,241,0.35)',
+                  background: '#6366f1',
+                  boxShadow: '0 0 6px rgba(99,102,241,0.45)',
                 } : {}}
               />
             </div>
